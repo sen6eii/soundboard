@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Board, Reference, MoodTag } from '@/lib/types'
-import { getBoards, addReference, updateReference, deleteReference, updateBoardContext } from '@/lib/store'
+import { getBoardById, addReference, updateReference, deleteReference, updateBoardContext } from '@/lib/store'
 import { deleteAudioBlob } from '@/lib/idb'
 import ReferenceCard from '@/components/ReferenceCard'
 import FastCapture from '@/components/FastCapture'
@@ -22,26 +22,24 @@ export default function BoardPage({ params }: { params: { id: string } }) {
   const [filterTags, setFilterTags] = useState<MoodTag[]>([])
   const [showFilter, setShowFilter] = useState(false)
 
-  useEffect(() => {
-    const boards = getBoards()
-    const found = boards.find(b => b.id === params.id)
-    if (!found) router.push('/boards')
-    else setBoard(found)
-  }, [params.id, router])
-
   const refresh = () => {
-    const boards = getBoards()
-    const found = boards.find(b => b.id === params.id)
-    if (found) setBoard(found)
+    getBoardById(params.id).then(b => { if (b) setBoard(b) })
   }
 
-  const handleAdd = (ref: AudioReference | LinkReference) => {
-    addReference(params.id, ref)
+  useEffect(() => {
+    getBoardById(params.id).then(b => {
+      if (!b) router.push('/boards')
+      else setBoard(b)
+    })
+  }, [params.id, router])
+
+  const handleAdd = async (ref: AudioReference | LinkReference) => {
+    await addReference(params.id, ref)
     refresh()
   }
 
-  const handleUpdate = (refId: string, updates: Partial<Reference>) => {
-    updateReference(params.id, refId, updates)
+  const handleUpdate = async (refId: string, updates: Partial<Reference>) => {
+    await updateReference(params.id, refId, updates)
     refresh()
   }
 
@@ -50,19 +48,17 @@ export default function BoardPage({ params }: { params: { id: string } }) {
     if (ref?.type === 'audio') {
       await deleteAudioBlob((ref as AudioReference).audioStorageKey).catch(() => {})
     }
-    deleteReference(params.id, refId)
+    await deleteReference(params.id, refId)
     refresh()
   }
 
-  const handleContextUpdate = (ctx: Partial<BoardContext>) => {
-    updateBoardContext(params.id, ctx)
+  const handleContextUpdate = async (ctx: Partial<BoardContext>) => {
+    await updateBoardContext(params.id, ctx)
     refresh()
   }
 
   const toggleFilterTag = (tag: MoodTag) => {
-    setFilterTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    )
+    setFilterTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
   }
 
   if (!board) return (
@@ -133,17 +129,9 @@ export default function BoardPage({ params }: { params: { id: string } }) {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* Context bar — always visible */}
-        <BoardContextBar
-          context={board.context}
-          accentColor={ac}
-          onUpdate={handleContextUpdate}
-        />
-
-        {/* Fast capture — always visible */}
+        <BoardContextBar context={board.context} accentColor={ac} onUpdate={handleContextUpdate} />
         <FastCapture accentColor={ac} onAdd={handleAdd} />
 
-        {/* References grid */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             {board.references.length === 0 ? (

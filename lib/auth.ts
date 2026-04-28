@@ -1,11 +1,8 @@
-// Auth stub — swappable with NextAuth, Clerk, Supabase Auth, etc.
+// Auth via Supabase — swap supabase calls here to migrate providers.
 // The useAuth() interface is the only contract the rest of the app depends on.
-// To add real auth: replace the localStorage calls inside login/register/logout
-// with calls to your auth provider, keeping the same return shape.
-
 import { useEffect, useState, useCallback } from 'react'
-
-const USER_KEY = 'sb_user'
+import { Session } from '@supabase/supabase-js'
+import { supabase } from './supabase'
 
 export interface AuthUser {
   id: string
@@ -13,44 +10,47 @@ export interface AuthUser {
   name: string
 }
 
+function sessionToUser(session: Session): AuthUser {
+  return {
+    id: session.user.id,
+    email: session.user.email!,
+    name: session.user.user_metadata?.name ?? session.user.email!.split('@')[0],
+  }
+}
+
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(USER_KEY)
-      setUser(raw ? (JSON.parse(raw) as AuthUser) : null)
-    } catch {
-      setUser(null)
-    }
-    setLoading(false)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session ? sessionToUser(session) : null)
+      setLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session ? sessionToUser(session) : null)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  // TODO: replace with POST /api/auth/login or provider SDK call
-  const login = useCallback((email: string): AuthUser | null => {
-    try {
-      const raw = localStorage.getItem(USER_KEY)
-      const stored = raw ? (JSON.parse(raw) as AuthUser) : null
-      if (stored?.email === email) {
-        setUser(stored)
-        return stored
-      }
-    } catch {}
-    return null
+  const login = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
   }, [])
 
-  // TODO: replace with POST /api/auth/register or provider SDK call
-  const register = useCallback((email: string, name: string): AuthUser => {
-    const newUser: AuthUser = { id: crypto.randomUUID(), email, name }
-    localStorage.setItem(USER_KEY, JSON.stringify(newUser))
-    setUser(newUser)
-    return newUser
+  const register = useCallback(async (email: string, name: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
+    })
+    if (error) throw error
   }, [])
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(USER_KEY)
-    setUser(null)
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut()
   }, [])
 
   return { user, loading, login, register, logout }

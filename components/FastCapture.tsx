@@ -83,13 +83,13 @@ export default function FastCapture({ accentColor, onAdd }: FastCaptureProps) {
     setLoading(true)
     try {
       const key = `audio_${uuidv4()}`
-      await saveAudioBlob(key, file)
+      const storageKey = await saveAudioBlob(key, file)
       const ref: AudioReference = {
         id: uuidv4(),
         type: 'audio',
         title: file.name.replace(/\.[^/.]+$/, ''),
         fileName: file.name,
-        audioStorageKey: key,
+        audioStorageKey: storageKey,
         tags: [],
         note: '',
         color: accentColor,

@@ -1,52 +1,29 @@
-// IndexedDB wrapper for storing audio blobs
-// Avoids localStorage 5MB quota limit
+// Audio storage via Supabase Storage (replaces IndexedDB).
+// Files are stored at {userId}/{key} in the 'audio' bucket.
+import { supabase } from './supabase'
 
-const DB_NAME = 'soundboard_audio'
-const STORE_NAME = 'blobs'
-const DB_VERSION = 1
-
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION)
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE_NAME)
-    }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
+async function getUserId(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Not authenticated')
+  return session.user.id
 }
 
-export async function saveAudioBlob(key: string, blob: Blob): Promise<void> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    tx.objectStore(STORE_NAME).put(blob, key)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+// Uploads audio blob and returns the full storage path to use as audioStorageKey.
+export async function saveAudioBlob(key: string, blob: Blob): Promise<string> {
+  const userId = await getUserId()
+  const path = `${userId}/${key}`
+  const { error } = await supabase.storage.from('audio').upload(path, blob, { upsert: true })
+  if (error) throw error
+  return path
 }
 
-export async function getAudioBlob(key: string): Promise<string | null> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly')
-    const req = tx.objectStore(STORE_NAME).get(key)
-    req.onsuccess = () => {
-      const blob = req.result as Blob | undefined
-      if (!blob) { resolve(null); return }
-      const url = URL.createObjectURL(blob)
-      resolve(url)
-    }
-    req.onerror = () => reject(req.error)
-  })
+// Downloads audio blob and returns a local object URL.
+export async function getAudioBlob(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from('audio').download(path)
+  if (error || !data) return null
+  return URL.createObjectURL(data)
 }
 
-export async function deleteAudioBlob(key: string): Promise<void> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    tx.objectStore(STORE_NAME).delete(key)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+export async function deleteAudioBlob(path: string): Promise<void> {
+  await supabase.storage.from('audio').remove([path])
 }

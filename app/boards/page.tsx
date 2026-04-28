@@ -21,27 +21,27 @@ export default function BoardsPage() {
   useEffect(() => {
     if (user) {
       setMounted(true)
-      setBoards(getBoards())
+      getBoards().then(setBoards)
     }
   }, [user])
 
-  const handleCreate = (name: string, description: string, color: string) => {
-    const board = createBoard(name, description, color)
-    setBoards(getBoards())
+  const handleCreate = async (name: string, description: string, color: string) => {
+    const board = await createBoard(name, description, color)
+    setBoards(await getBoards())
     setShowCreate(false)
     router.push(`/board/${board.id}`)
   }
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    if (confirm('Delete this board and all its references?')) {
-      deleteBoard(id)
-      setBoards(getBoards())
+    if (confirm('¿Eliminar este board y todas sus referencias?')) {
+      await deleteBoard(id)
+      setBoards(await getBoards())
     }
   }
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     router.push('/')
   }
 
@@ -79,7 +79,7 @@ export default function BoardsPage() {
             <button
               onClick={handleLogout}
               className="p-1.5 rounded text-muted hover:text-dim transition-colors"
-              title="Sign out"
+              title="Cerrar sesión"
             >
               <LogOut size={14} />
             </button>
@@ -93,17 +93,13 @@ export default function BoardsPage() {
           <div className="flex flex-col items-center justify-center py-36 gap-5">
             <div className="grid grid-cols-3 gap-2 mb-2 opacity-20">
               {Array.from({ length: 9 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 rounded border border-border bg-panel"
-                  style={{ opacity: Math.random() * 0.8 + 0.2 }}
-                />
+                <div key={i} className="w-8 h-8 rounded border border-border bg-panel" />
               ))}
             </div>
             <div className="text-center max-w-sm">
-              <h2 className="font-display font-bold text-text text-lg">Your sonic workspace</h2>
+              <h2 className="font-display font-bold text-text text-lg">Tu workspace sonoro</h2>
               <p className="text-[13px] text-dim mt-2 font-body leading-relaxed">
-                Create boards to collect audio references, YouTube links, and sonic inspirations for your projects.
+                Creá boards para coleccionar referencias de audio, links de YouTube y tus inspiraciones sonoras.
               </p>
             </div>
             <button
@@ -111,7 +107,7 @@ export default function BoardsPage() {
               className="flex items-center gap-2 rounded border border-accent/40 bg-accent/10 px-5 py-2.5 font-mono text-xs font-bold tracking-widest text-accent transition-all hover:bg-accent/20"
             >
               <Plus size={13} strokeWidth={2.5} />
-              CREATE YOUR FIRST BOARD
+              CREAR TU PRIMER BOARD
             </button>
           </div>
         ) : (
@@ -132,18 +128,14 @@ export default function BoardsPage() {
                     className="absolute left-0 top-0 bottom-0 w-px opacity-0 group-hover:opacity-100 transition-opacity"
                     style={{ backgroundColor: board.accentColor }}
                   />
-
                   <div
                     className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: `${board.accentColor}15` }}
                   >
                     <Layers size={15} style={{ color: board.accentColor }} />
                   </div>
-
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <h3 className="font-display font-bold text-text text-sm truncate">{board.name}</h3>
-                    </div>
+                    <h3 className="font-display font-bold text-text text-sm truncate">{board.name}</h3>
                     {board.description && (
                       <p className="text-[11px] text-dim truncate font-body mt-0.5">{board.description}</p>
                     )}
@@ -158,15 +150,12 @@ export default function BoardsPage() {
                           <Link2 size={9} /> {stats.links}
                         </span>
                       )}
-                      {stats.total === 0 && (
-                        <span className="font-mono text-[9px] text-muted">empty</span>
-                      )}
+                      {stats.total === 0 && <span className="font-mono text-[9px] text-muted">vacío</span>}
                       <span className="font-mono text-[9px] text-muted ml-auto">
-                        {new Date(board.updatedAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                        {new Date(board.updatedAt).toLocaleDateString('es', { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-1">
                     <button
                       onClick={e => handleDelete(e, board.id)}
