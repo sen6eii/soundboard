@@ -109,7 +109,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border py-5">
         <p className="text-center font-mono text-[10px] text-muted tracking-widest">
-          SOUNDBOARD — TUS DATOS SE GUARDAN LOCALMENTE EN TU NAVEGADOR
+          SOUNDBOARD — 2026 ©
         </p>
       </footer>
     </div>
