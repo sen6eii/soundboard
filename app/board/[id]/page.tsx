@@ -25,7 +25,7 @@ export default function BoardPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const boards = getBoards()
     const found = boards.find(b => b.id === params.id)
-    if (!found) router.push('/')
+    if (!found) router.push('/boards')
     else setBoard(found)
   }, [params.id, router])
 
@@ -82,7 +82,7 @@ export default function BoardPage({ params }: { params: { id: string } }) {
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-ink/95 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
-          <button onClick={() => router.push('/')} className="text-dim hover:text-text transition-colors p-1">
+          <button onClick={() => router.push('/boards')} className="text-dim hover:text-text transition-colors p-1">
             <ArrowLeft size={16} />
           </button>
           <div className="flex-1 min-w-0">
